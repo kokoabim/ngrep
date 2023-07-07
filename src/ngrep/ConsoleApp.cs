@@ -1,4 +1,6 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.CommandLineUtils;
 
 namespace Kokoabim.NGrep;
@@ -54,6 +56,15 @@ internal class ConsoleApp : IConsoleApp
                 int matchIndex = 0;
                 Regex rx = new(context.Pattern!.Value, context.RegexOptions);
 
+                Regex jsonEscapeRx = new(@"\bje\((?<v>(.*?((?<=\\)\))*)*)\)");
+                JsonSerializerOptions jsonSerializerOptions = new JsonSerializerOptions
+                {
+                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+                    WriteIndented = false,
+                };
+
+                Regex outputGroupRx = new(@"\$-(?<gi>\d+)");
+
                 while (!string.IsNullOrEmpty(input = context.ReadInput()))
                 {
                     bool showIndexes = context.Index.HasValue();
@@ -61,14 +72,33 @@ internal class ConsoleApp : IConsoleApp
                     MatchCollection matches = rx.Matches(input);
                     if (matches.Count > 0)
                     {
-                        foreach (Match match in matches.Cast<Match>())
+                        foreach (Match match in matches.Where(m => m.Success).Cast<Match>())
                         {
                             ++matchIndex;
                             if (showIndexes) Console.Write($"{matchIndex}: ");
 
                             if (context.Output.HasValue())
                             {
-                                Console.WriteLine(match.Result(context.Output.Value()));
+                                string outputValue = context.Output.Value();
+
+                                int groupCount = match.Groups.Count;
+                                outputGroupRx.Matches(outputValue).ForEach(m =>
+                                {
+                                    int groupIndex = groupCount - int.Parse(m.Groups["gi"].Value);
+                                    if (groupIndex >= 0 && groupIndex <= groupCount) outputValue = outputValue.Replace(m.Value, $"${groupIndex}");
+                                },
+                                m => m.Success);
+
+                                outputValue = match.Result(outputValue);
+
+                                jsonEscapeRx.Matches(outputValue).ForEach(m =>
+                                {
+                                    string valueToEscape = m.Groups["v"].Value;
+                                    outputValue = outputValue[0..m.Index] + JsonSerializer.Serialize(valueToEscape, jsonSerializerOptions)[1..^1] + outputValue[(m.Index + m.Length)..];
+                                },
+                                m => m.Success);
+
+                                Console.WriteLine(outputValue);
                             }
                             else
                             {
