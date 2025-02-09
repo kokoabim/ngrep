@@ -1,5 +1,4 @@
-.vscode/
-bin/
-obj/
+**/bin/
+**/obj/
 publish/
 .DS_Store

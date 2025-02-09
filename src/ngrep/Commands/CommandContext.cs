@@ -27,9 +27,9 @@ internal class CommandContext
         Singleline = command.Option("-s|--singleline", "Changes the meaning of the dot (.) so it matches every character (instead of every character except \\n)", CommandOptionType.NoValue);
     }
 
-    internal void Init()
+    internal bool Init()
     {
-        InputSource = GetInputSource();
+        if ((InputSource = GetInputSource()) == InputSource.None) return false;
 
         if (InputSource == InputSource.File)
         {
@@ -47,6 +47,8 @@ internal class CommandContext
         _singleline = Singleline.HasValue();
 
         RegexOptions = GetRegexOptions();
+
+        return true;
     }
 
     internal virtual bool IsValid(out string? message)
@@ -74,10 +76,16 @@ internal class CommandContext
 
     internal string? ReadInput() => _singleline ? _reader?.ReadToEnd() : _reader?.ReadLine();
 
-    private InputSource GetInputSource() =>
-        Console.IsInputRedirected
-        ? InputSource.StdIn
-        : (File.HasValue() ? InputSource.File : InputSource.Argument);
+    private InputSource GetInputSource()
+    {
+        if (File.HasValue()) return InputSource.File;
+
+        if (Input?.Value != null) return InputSource.Argument;
+
+        if (Console.IsInputRedirected && Console.OpenStandardInput().CanRead) return InputSource.StdIn;
+
+        return InputSource.None;
+    }
 
     private RegexOptions GetRegexOptions()
     {

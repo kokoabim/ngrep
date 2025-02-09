@@ -5,7 +5,6 @@ namespace Kokoabim.NGrep;
 internal class ReplaceCommandContext : CommandContext
 {
     public CommandOption Global { get; }
-    
     public CommandArgument Replacement { get; }
 
     public ReplaceCommandContext(CommandLineApplication command) : base(command)

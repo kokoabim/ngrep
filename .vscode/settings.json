@@ -1,0 +1,10 @@
+{
+    "dotnet.defaultSolution": "ngrep.sln",
+    "files.exclude": {
+        "**/bin/": true,
+        "**/obj/": true,
+    },
+    "cSpell.words": [
+        "ngrep"
+    ]
+}

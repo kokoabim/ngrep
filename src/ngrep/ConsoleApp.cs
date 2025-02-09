@@ -12,32 +12,38 @@ internal interface IConsoleApp
 
 internal class ConsoleApp : IConsoleApp
 {
-    public int Run(string[] args)
+    private readonly CommandLineApplication _cliApp;
+
+    public ConsoleApp()
     {
-        CommandLineApplication app = new()
+        _cliApp = new()
         {
-            ExtendedHelpText = "NGrep is a .NET Global Regular Expression Print CLI utility\nMIT License — Created by Spencer James — https://github.com/kokoabim/ngrep",
-            FullName = "NGrep — .NET Global Regular Expression Print",
             Name = "ngrep",
+            FullName = "NGrep — .NET Global Regular Expression Print",
+            ExtendedHelpText = "NGrep is a .NET Global Regular Expression Print CLI utility\nMIT License — Created by Spencer James — https://github.com/kokoabim/ngrep",
         };
 
-        app.HelpOption("-?|-h|--help");
-        AddMatchCommand(app);
-        AddReplaceCommand(app);
+        _cliApp.HelpOption("-?|-h|--help");
 
+        AddMatchCommand();
+        AddReplaceCommand();
+    }
+
+    public int Run(string[] args)
+    {
         if (args.Length == 0)
         {
-            app.ShowHelp();
+            _cliApp.ShowHelp();
             return 0;
         }
 
-        try { return app.Execute(args); }
+        try { return _cliApp.Execute(args); }
         catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); return 1; }
     }
 
-    private static void AddMatchCommand(CommandLineApplication app)
+    private void AddMatchCommand()
     {
-        _ = app.Command("m", command =>
+        _ = _cliApp.Command("m", command =>
         {
             command.FullName = "NGrep Match";
             command.Description = "Match pattern in input data";
@@ -45,10 +51,15 @@ internal class ConsoleApp : IConsoleApp
 
             command.OnExecute(() =>
             {
-                context.Init();
+                if (!context.Init())
+                {
+                    Console.Error.WriteLine("Error: Invalid input source");
+                    return 1;
+                }
+
                 if (!context.IsValid(out string? message))
                 {
-                    Console.WriteLine(message);
+                    Console.Error.WriteLine(message);
                     return 1;
                 }
 
@@ -113,9 +124,9 @@ internal class ConsoleApp : IConsoleApp
         });
     }
 
-    private static void AddReplaceCommand(CommandLineApplication app)
+    private void AddReplaceCommand()
     {
-        _ = app.Command("r", command =>
+        _ = _cliApp.Command("r", command =>
         {
             command.FullName = "NGrep Replace";
             command.Description = "Replace pattern in input data";
@@ -123,10 +134,15 @@ internal class ConsoleApp : IConsoleApp
 
             command.OnExecute(() =>
             {
-                context.Init();
+                if (!context.Init())
+                {
+                    Console.Error.WriteLine("Error: Invalid input source");
+                    return 1;
+                }
+
                 if (!context.IsValid(out string? message))
                 {
-                    Console.WriteLine(message);
+                    Console.Error.WriteLine(message);
                     return 1;
                 }
 
